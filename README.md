@@ -3,6 +3,8 @@
 **把绿幕角色动作视频，变成游戏能用的像素精灵表（Sprite Sheet）。**
 单个网页文件，双击就能用；全部在本机浏览器里处理，不联网、不上传。
 
+**在线使用**：https://fzlaoyuan.github.io/video-sprite-extractor/ （打开就能用，视频只在你自己的浏览器里处理，不会上传）
+
 [English below](#english)
 
 ![工具界面](docs/screenshot.png)
@@ -58,6 +60,8 @@ Windows 上也可以直接把视频拖到 `场景动画抽帧（拖视频到这�
 
 **Turn green-screen character animation videos into pixel-art sprite sheets for your game.**
 It is a single HTML file: open it and it works. Everything runs locally in your browser. Nothing is uploaded.
+
+**Try it online**: https://fzlaoyuan.github.io/video-sprite-extractor/ (videos are processed in your own browser and never uploaded)
 
 I built this with AI while making my pixel game *Xingmeng EV*. The game's character animations were extracted with it from AI-generated motion videos.
 
