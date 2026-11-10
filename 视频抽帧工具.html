@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>视频抽帧工具</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#0f141a;--panel:#161e27;--panel2:#1c2632;--line:#2a3746;--txt:#e6edf3;--dim:#8b9bab;--acc:#5b8def;--acc2:#3a6fd8;--ok:#4cc38a;--sel:#f5c542;--warn:#f0883e;--stage:#3a5840;--r:8px}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:13px/1.55 "Microsoft YaHei","PingFang SC",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:14px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header .logo{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--acc),#8a5cf6);display:grid;place-items:center;font-weight:800;color:#fff}
+header h1{margin:0;font-size:16px;font-weight:700}header .sub{color:var(--dim);font-size:12px}
+header .sp{flex:1}
+main{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(380px,1fr);gap:16px;padding:16px 20px;max-width:1700px;margin:0 auto}
+@media (max-width:1100px){main{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.card h2{margin:0 0 12px;font-size:14px;display:flex;align-items:center;gap:8px}
+.card h2 .n{width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;font-size:12px;display:grid;place-items:center;flex:none}
+.card h2 .r{margin-left:auto;font-weight:400}
+label{display:inline-flex;align-items:center;gap:6px;color:var(--dim)}
+input,select,button{font:inherit;color:var(--txt);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;outline:none}
+input:focus,select:focus{border-color:var(--acc)}
+input[type=number]{width:64px}input[type=text]{width:160px}input[type=checkbox]{accent-color:var(--acc);width:15px;height:15px;padding:0}
+button{cursor:pointer;background:var(--panel2);transition:border-color .12s,background .12s}button:hover{border-color:var(--acc)}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}button.pri:hover{background:var(--acc2)}
+button.big{padding:8px 16px;font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}.row+.row{margin-top:10px}
+.hint{color:var(--dim);font-size:12px;margin:8px 0 0}
+kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:11px;color:var(--txt)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:transparent;padding:6px 12px}.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--acc);color:#fff;font-weight:700}
+.drop{border:1.5px dashed var(--line);border-radius:var(--r);padding:14px;text-align:center;color:var(--dim);transition:.15s;cursor:pointer}
+.drop.over,.drop:hover{border-color:var(--acc);color:var(--txt);background:rgba(91,141,239,.06)}
+.drop b{color:var(--txt)}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tabs button{display:inline-flex;align-items:center;gap:6px}.tabs button.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:700}
+.chip{font-size:11px;padding:0 6px;border-radius:9px;background:rgba(255,255,255,.08);color:var(--dim)}
+.tabs button.on .chip{background:rgba(0,0,0,.2);color:#fff}.chip.ok{color:var(--ok)}
+.lab{color:var(--dim);font-size:12px;width:44px;flex:none}
+#view{width:100%;aspect-ratio:16/9;background:#000;border-radius:6px;display:block}
+.transport{display:flex;gap:8px;align-items:center;margin-top:10px}
+.transport input[type=range]{flex:1;min-width:0;accent-color:var(--acc)}
+.transport button{flex:none;width:92px}
+#fno{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--dim)}
+.cands{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.cands:empty{display:none}
+.cands button{border-color:var(--ok)}
+.slots{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.slot{width:86px;border:2px solid var(--line);border-radius:7px;padding:3px;cursor:pointer;text-align:center;font-size:11px;color:var(--dim);background:var(--bg)}
+.slot.on{border-color:var(--sel);color:var(--txt)}.slot.idle{border-style:dashed}
+.slot canvas{width:76px;height:76px;image-rendering:pixelated;background:var(--stage);display:block;margin:0 auto 2px;border-radius:4px}
+canvas.px{image-rendering:pixelated;border-radius:6px;max-width:100%;display:block}
+details{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+details summary{cursor:pointer;color:var(--txt);font-weight:600;list-style:none;display:flex;align-items:center;gap:6px}
+details summary::before{content:"▸";color:var(--dim);transition:transform .15s}details[open] summary::before{transform:rotate(90deg)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 14px;margin-top:10px}
+.step{display:inline-flex;align-items:center}.step button{width:28px;padding:5px 0}.step input{width:52px;text-align:center;border-radius:0;border-left:0;border-right:0}
+.step button:first-child{border-radius:6px 0 0 6px}.step button:last-child{border-radius:0 6px 6px 0}
+#log{margin-top:10px;min-height:20px;color:var(--ok);font-size:12px}
+.help{max-width:1700px;margin:0 auto;padding:0 20px}
+.help .card{margin-top:16px}.help ol{margin:0;padding-left:20px;color:var(--dim)}.help li{margin:3px 0}.help b{color:var(--txt)}
+.hide{display:none!important}
+</style></head><body>
+<header>
+  <div class="logo">帧</div>
+  <div><h1>视频抽帧工具</h1><div class="sub">绿幕 / 黑底视频 → 像素风精灵表（Sprite Sheet）</div></div>
+  <div class="sp"></div>
+  <button id="helpBtn">使用说明</button>
+</header>
+<div class="help hide" id="help"><div class="card">
+  <ol>
+    <li><b>准备视频</b>：角色站在纯绿背景上原地做动作（跑步、待机、攻击…），镜头固定不动。一条视频里可以并排放 2～3 个角色，各占一块，互不接触。</li>
+    <li><b>载入</b>：先选「一条视频几个角色」，再把视频拖进来。文件名带 <b>正面 / 侧面 / 背面</b>（或 front / side / back）会自动分到对应方向，带 <b>跑 / 走 / 待机 / 攻击</b> 会自动选输出规格。</li>
+    <li><b>选帧</b>：拖到动作开始处，点「自动找循环」，跑步、走路选「两步」，其它选「一步」。工具会在首尾最接得上的位置均匀取帧。不满意的格子点一下，再用 <kbd>←</kbd> <kbd>→</kbd> 换帧，按 <kbd>Enter</kbd> 放进去。</li>
+    <li><b>调整</b>：看右边的预览。多个角色时用「同屏对比」和标尺把身高调一致（－ / ＋）。</li>
+    <li><b>导出</b>：得到 PNG 精灵表，每行一个方向（正面 / 左侧 / 右侧 / 背面），每行从左到右是帧，另附几个放大尺寸和一份选帧记录（以后可以读回来接着改）。</li>
+  </ol>
+  <p class="hint">全部在本机浏览器里处理，不上传任何文件。推荐用 Chrome 或 Edge。</p>
+</div></div>
+<main>
+<div class="col">
+  <section class="card">
+    <h2><span class="n">1</span>载入视频</h2>
+    <div class="row"><span class="lab">视频里</span>
+      <div class="seg" id="kindSeg"><button data-v="1" class="on">1 个角色</button><button data-v="2">2 个角色并排</button><button data-v="3">3 个角色并排</button></div>
+      <label id="triL"><input id="tri" type="checkbox"> 三连视频（同一个角色三个方向并排：左 = 正面，中 = 侧面，右 = 背面）</label>
+    </div>
+    <div class="row"><div class="drop" id="drop" style="flex:1"><b>把视频拖到这里</b>，或点击选择（可以一次多选）<input id="file" type="file" accept="video/*" multiple class="hide"></div></div>
+    <div class="row" id="charRow"><span class="lab">角色</span><div class="tabs" id="chars"></div>
+      <label>名称 <input id="cname" type="text" style="width:120px" placeholder="用于导出文件名"></label></div>
+    <div class="row"><span class="lab">方向</span><div class="tabs" id="tabs"></div></div>
+    <div class="row"><span class="lab"></span>
+      <label id="mirrorL"><input id="mirror" type="checkbox" checked> 右侧 = 左侧镜像（不用另做视频）</label>
+      <label>帧率 <input id="fps" type="number" value="24" min="1" max="120"></label>
+      <label>只用画面的 <select id="region"><option value="full">整个画面</option><option value="LH">左半</option><option value="RH">右半</option><option value="L">左 1/3</option><option value="M">中 1/3</option><option value="R">右 1/3</option><option value="TL">左上 1/4</option><option value="TR">右上 1/4</option><option value="BL">左下 1/4</option><option value="BR">右下 1/4</option></select></label>
+    </div>
+  </section>
+  <section class="card">
+    <h2><span class="n">2</span>选帧<span class="r"><label><input id="showKey" type="checkbox" checked> 显示抠图效果</label></span></h2>
+    <canvas id="view" width="960" height="540"></canvas>
+    <div class="transport"><button id="prev">◀ 上一帧</button><input id="seek" type="range" min="0" value="0"><button id="next">下一帧 ▶</button></div>
+    <div class="row" style="margin-top:6px"><span id="fno">-</span></div>
+    <div class="row">
+      <button class="pri big" id="auto">自动找循环</button>
+      <button id="pick">放进选中的格子 <kbd>Enter</kbd></button>
+      <span style="color:var(--line)">|</span>
+      <button id="mkA">标为起点</button><button id="mkB">标为终点</button><button id="even">起点～终点均匀取帧</button>
+    </div>
+    <div class="cands" id="cands"></div>
+    <p class="hint">「自动找循环」从当前帧往后找。循环 = 动作做完一遍又回到开头；跑步、走路要包含左右脚各一步。手动标的话，起点和终点要是同一个姿势，终点那帧不会被取进去。</p>
+    <details open><summary>选中的帧（点格子选中，再换帧）</summary><div class="slots" id="slots" style="margin-top:10px"></div></details>
+  </section>
+</div>
+<div class="col">
+  <section class="card">
+    <h2><span class="n">3</span>输出规格</h2>
+    <div class="row"><label>动作 <select id="preset"></select></label></div>
+    <div class="grid2">
+      <label>每个方向 <input id="n" type="number" min="1" max="24"> 帧</label>
+      <label>格子 <input id="cell" type="number" min="16" max="512"> px</label>
+      <label>另出尺寸 <input id="extra" type="text" style="width:90px" title="逗号分隔，按格子边长"> px</label>
+      <label><input id="idle" type="checkbox"> 每行第 1 格放待机帧</label>
+    </div>
+    <div class="row"><label>文件名 <input id="prefix" type="text" style="width:220px"></label></div>
+  </section>
+  <section class="card">
+    <h2><span class="n">4</span>预览<span class="r"><label>每帧 <input id="ms" type="number" value="90" min="20" max="1000"> 毫秒</label> <label>放大 <input id="zoom" type="number" value="4" min="1" max="8"></label></span></h2>
+    <canvas id="anim" class="px" width="10" height="10"></canvas>
+    <p class="hint">横线是脚底基线。载入了参考图时，每个方向右边并排显示参考图。</p>
+    <div id="cmpBox"><details open><summary>同屏对比（当前方向）</summary>
+      <canvas id="cmp" class="px" width="10" height="10" style="margin-top:10px"></canvas>
+      <p class="hint">标尺：细线每 4 像素，粗线每 8 像素，左边数字是离脚底的像素数。黄线是这一帧头顶的位置。大小不一致就切到那个角色，在下面「身高占格子」点 － / ＋。</p></details></div>
+  </section>
+  <section class="card">
+    <h2><span class="n">5</span>调整</h2>
+    <div class="grid2">
+      <label>身高占格子 <span class="step"><button id="ratioDn">－</button><input id="ratio" type="number" value="84" min="20" max="100"><button id="ratioUp">＋</button></span> %</label>
+      <label>脚底在第 <input id="foot" type="number" value="61" min="1" max="511"> 行</label>
+      <label><input id="keepBob" type="checkbox" checked> 保留上下起伏</label>
+    </div>
+    <details><summary>抠图</summary><div class="grid2">
+      <label>背景 <select id="mode"><option value="green">绿幕（角色 / 物件）</option><option value="black">黑底发光（火 / 烟 / 光效）</option></select></label>
+      <label>抠图强度 <input id="tol" type="number" value="45" min="5" max="120"></label></div></details>
+    <details><summary>像素风格</summary><div class="grid2">
+      <label>颜色数 <input id="colors" type="number" value="40" min="0" max="256"> （0 = 不压色）</label>
+      <label><input id="outline" type="checkbox" checked> 深色描边</label>
+      <label>描边色 <input id="olc" type="color" value="#221626" style="width:44px;height:28px;padding:2px"></label></div></details>
+    <details><summary>颜色</summary><div class="grid2">
+      <label>亮度 <input id="bri" type="number" value="0" min="-100" max="100"></label>
+      <label>对比 <input id="con" type="number" value="0" min="-100" max="100"></label>
+      <label>饱和 <input id="sat" type="number" value="0" min="-100" max="100"></label></div></details>
+    <details><summary>参考图（可选）</summary><div class="grid2">
+      <label style="grid-column:1/-1">已有的精灵表 PNG <input id="refFile" type="file" accept="image/png"></label>
+      <label><input id="match" type="checkbox" checked> 按参考图校色</label>
+      <label>力度 <input id="matchK" type="number" value="85" min="0" max="100"> %</label>
+      <label><input id="showRef" type="checkbox" checked> 预览里并排显示</label>
+      <button id="measure">从参考图量身高和脚底</button></div>
+      <p class="hint">参考图要和导出格式一致：每行一个方向（单行动作就一行），格子是正方形。</p></details>
+  </section>
+  <section class="card">
+    <h2><span class="n">6</span>导出</h2>
+    <div class="row"><button class="pri big" id="export">导出 PNG</button><button class="pri big" id="exportGrp">导出全部角色</button></div>
+    <div class="row"><button id="saveProj">保存选帧记录</button><label>读取选帧记录 <input id="loadProj" type="file" accept=".json"></label></div>
+    <div id="log"></div>
+    <p class="hint">每个尺寸一张 PNG：行 = 正面 / 左侧 / 右侧 / 背面，每行从左到右是帧。主尺寸文件名不带后缀，另出的尺寸带 @尺寸。文件在浏览器的下载文件夹里。</p>
+  </section>
+</div>
+</main>
+<script>
+'use strict';
+// ---------- 输出规格 ----------
+const PRESETS = [
+  { k: 'run', name: '跑步（8 帧 · 64 px）', n: 8, idle: 0, cell: 64, rows: 4, ms: 90, act: 'run' },
+  { k: 'walk', name: '走路（8 帧 · 64 px）', n: 8, idle: 0, cell: 64, rows: 4, ms: 110, act: 'walk' },
+  { k: 'idle', name: '站立待机（6 帧 · 64 px）', n: 6, idle: 0, cell: 64, rows: 4, ms: 160, act: 'idle' },
+  { k: 'atk', name: '攻击（4 帧 · 64 px）', n: 4, idle: 0, cell: 64, rows: 4, ms: 80, act: 'attack' },
+  { k: 'atkL', name: '大型攻击（6 帧 · 128 px）', n: 6, idle: 0, cell: 128, rows: 4, ms: 80, act: 'attack' },
+  { k: 'prop', name: '场景物件 · 单行循环（8 帧 · 192 px）', n: 8, idle: 0, cell: 192, rows: 1, ms: 110, act: 'loop' },
+  { k: 'fx', name: '发光特效 · 单行（8 帧 · 128 px，黑底）', n: 8, idle: 0, cell: 128, rows: 1, ms: 70, act: 'fx', mode: 'black', colors: 0, outline: false },
+];
+const DIR4 = ['正面', '左侧', '右侧', '背面'], DIR1 = ['单行'];
+const POS = { 1: [''], 2: ['左', '右'], 3: ['左', '中', '右'] }, REGS = { 1: ['full'], 2: ['LH', 'RH'], 3: ['L', 'M', 'R'] };
+const $ = id => document.getElementById(id);
+const S = { cur: 0, slot: 0, ch: 0, nch: 1, names: ['角色1', '角色2', '角色3'], chars: [[], [], []], refs: [null, null, null], cp: [{}, {}, {}], cmp: null, dirs: [], ref: null, out: null, timer: 0, busy: false };
+S.dirs = S.chars[0];
+function isGrp() { return S.nch > 1; }
+function mkDir(name) { return { name, file: '', url: '', v: null, pv: null, frames: 0, picks: [], A: -1, B: -1, cache: new Map(), region: 'full' }; }
+// 画面区域（比例）：并排视频按左右 / 左中右切，2×2 物件视频按四角切
+const REG = { full: [0, 0, 1, 1], LH: [0, 0, .5, 1], RH: [.5, 0, .5, 1], L: [0, 0, 1 / 3, 1], M: [1 / 3, 0, 1 / 3, 1], R: [2 / 3, 0, 1 / 3, 1], TL: [0, 0, .5, .5], TR: [.5, 0, .5, .5], BL: [0, .5, .5, .5], BR: [.5, .5, .5, .5] };
+function srcRect(v, reg) { const W = v.videoWidth || v.width, H = v.videoHeight || v.height, r = REG[reg || 'full']; return [Math.round(r[0] * W), Math.round(r[1] * H), Math.round(r[2] * W), Math.round(r[3] * H)]; }
+function preset() { return PRESETS.find(p => p.k === $('preset').value) || PRESETS[0]; }
+function rows() { return preset().rows; }
+function slotsN() { return +$('n').value + ($('idle').checked ? 1 : 0); }
+function log(s) { $('log').textContent = s; }
+function safeName(s) { return (s || '').trim().replace(/[\\/:*?"<>|\s]+/g, '_') || 'sprite'; }
+
+// ---------- 初始化 ----------
+for (const p of PRESETS) { const o = document.createElement('option'); o.value = p.k; o.textContent = p.name; $('preset').appendChild(o); }
+function applyPreset() {
+  const p = preset(); $('n').value = p.n; $('idle').checked = !!p.idle; $('cell').value = p.cell; $('ms').value = p.ms;
+  $('extra').value = [Math.round(p.cell * 1.5), p.cell * 2].join(','); $('mode').value = p.mode || 'green'; $('colors').value = p.colors ?? 40; $('outline').checked = p.outline ?? true;
+  $('ratio').value = p.rows === 1 ? 90 : 84; $('foot').value = Math.round(p.cell * (p.rows === 1 ? 0.97 : 61 / 64));
+  S.cp = S.cp.map(() => ({ ratio: +$('ratio').value, foot: +$('foot').value }));   // 身高、脚底每个角色各一份
+  const names = p.rows === 4 ? DIR4 : DIR1; S.chars = S.chars.map(old => names.map((n, i) => old[i] && old[i].name === n ? old[i] : mkDir(n))); S.cur = Math.min(S.cur, names.length - 1);
+  switchChar(S.ch);
+}
+function switchChar(c) {
+  S.ch = Math.min(c, S.nch - 1); S.dirs = S.chars[S.ch]; S.ref = S.refs[S.ch]; S.out = null; $('ratio').value = S.cp[S.ch].ratio; $('foot').value = S.cp[S.ch].foot;
+  $('cname').value = S.names[S.ch]; $('prefix').value = safeName(S.names[S.ch]) + '_' + preset().act;
+  for (const d of S.dirs) fitPicks(d); S.slot = 0; buildChars(); buildTabs(); loadView(); refresh();
+}
+function buildChars() {
+  const t = $('chars'); t.innerHTML = ''; const on = isGrp();
+  $('exportGrp').classList.toggle('hide', !on); $('triL').classList.toggle('hide', on || rows() !== 4); $('cmpBox').classList.toggle('hide', !on);
+  for (let c = 0; c < S.nch; c++) { const dirs = S.chars[c], need = dirs.filter((d, i) => d.v && !(rows() === 4 && i === 2 && $('mirror').checked)), done = need.filter(d => d.picks.every(f => f >= 0)).length;
+    const b = document.createElement('button'); b.className = c === S.ch ? 'on' : ''; const pos = POS[S.nch][c];
+    b.innerHTML = `${S.names[c]}${pos ? '（' + pos + '）' : ''}<span class="chip${need.length && done === need.length ? ' ok' : ''}">${need.length ? done + '/' + need.length : '无视频'}</span>`; b.onclick = () => switchChar(c); t.appendChild(b); }
+}
+function fitPicks(d) { const n = slotsN(); while (d.picks.length < n) d.picks.push(-1); d.picks.length = n; }
+function buildTabs() {
+  const t = $('tabs'); t.innerHTML = '';
+  S.dirs.forEach((d, i) => { const b = document.createElement('button'); b.className = i === S.cur ? 'on' : ''; const done = d.picks.filter(x => x >= 0).length;
+    const mir = rows() === 4 && i === 2 && $('mirror').checked; b.innerHTML = d.name + `<span class="chip${d.v && done === d.picks.length ? ' ok' : ''}">${mir ? '镜像' : d.v ? done + '/' + d.picks.length : '未载入'}</span>`; b.onclick = () => { S.cur = i; S.slot = 0; buildTabs(); loadView(); refresh(); }; t.appendChild(b); });
+  $('mirrorL').classList.toggle('hide', rows() !== 4);
+}
+$('preset').onchange = applyPreset; for (const id of ['n', 'idle']) $(id).onchange = () => { for (const ds of S.chars) for (const d of ds) fitPicks(d); buildChars(); buildTabs(); refresh(); };
+for (const b of $('kindSeg').children) b.onclick = () => { for (const x of $('kindSeg').children) x.classList.toggle('on', x === b); S.nch = +b.dataset.v; switchChar(0); };
+$('cname').onchange = () => { S.names[S.ch] = $('cname').value.trim() || '角色' + (S.ch + 1); switchChar(S.ch); };
+$('ratioDn').onclick = () => { $('ratio').value = Math.max(20, +$('ratio').value - 1); $('ratio').onchange(); };
+$('ratioUp').onclick = () => { $('ratio').value = Math.min(100, +$('ratio').value + 1); $('ratio').onchange(); };
+for (const id of ['cell', 'extra', 'mode', 'tol', 'ratio', 'foot', 'keepBob', 'colors', 'outline', 'olc', 'bri', 'con', 'sat', 'match', 'matchK', 'mirror']) $(id).onchange = () => { if (id === 'mode' || id === 'tol') for (const ds of S.chars) for (const d of ds) d.cache.clear(); if (id === 'ratio' || id === 'foot') S.cp[S.ch][id] = +$(id).value; buildChars(); buildTabs(); refresh(); };
+$('ms').onchange = $('zoom').onchange = $('showRef').onchange = () => drawAnim(true);
+$('helpBtn').onclick = () => $('help').classList.toggle('hide');
+
+// ---------- 视频 ----------
+function curDir() { return S.dirs[S.cur]; }
+function fps() { return +$('fps').value || 24; }
+function seekTo(v, i) { return new Promise(res => { const t = (i + 0.5) / fps(); if (v.readyState >= 2 && Math.abs(v.currentTime - t) < 1e-4) return res(); v.addEventListener('seeked', () => res(), { once: true }); v.currentTime = t; }); }
+function newVideo(url) { const v = document.createElement('video'); v.muted = true; v.preload = 'auto'; v.playsInline = true; v.src = url; return new Promise((res, rej) => { v.onloadeddata = () => res(v); v.onerror = () => rej(new Error('视频载入失败（浏览器不支持这个格式，建议转成 MP4 / H.264）')); }); }
+async function setVideo(d, url, name) { d.url = url; d.file = name; d.cache.clear(); d.v = await newVideo(url); d.pv = await newVideo(url); d.frames = Math.max(1, Math.floor(d.v.duration * fps())); }
+// 载入：文件名带方向关键词的自动分方向，没有就放到当前方向；带动作关键词的自动选输出规格
+function dirOf(name) { const s = name.toLowerCase(); return /正面|front/.test(s) ? 0 : /背面|back/.test(s) ? 3 : /右侧|right/.test(s) ? 2 : /侧面|左侧|side|left/.test(s) ? 1 : -1; }
+async function loadFiles(list) {
+  try {
+    const nm = list.map(f => f.name).join(' '), act = /攻击|attack/i.test(nm) ? 'atk' : /待机|站立|idle/i.test(nm) ? 'idle' : /走|walk/i.test(nm) ? 'walk' : /跑|run/i.test(nm) ? 'run' : '';
+    if (act && rows() === 4 && preset().k !== act && !(act === 'atk' && preset().k === 'atkL')) { $('preset').value = act; applyPreset(); }
+    const got = [];
+    for (const f of list) {
+      if (!isGrp() && $('tri').checked && rows() === 4) { for (const [di, reg] of [[0, 'L'], [1, 'M'], [3, 'R']]) { S.dirs[di].region = reg; await setVideo(S.dirs[di], f.url, f.name); } $('mirror').checked = true; got.push('正面 / 侧面 / 背面（三连）'); S.cur = 1; continue; }
+      let di = rows() === 4 ? dirOf(f.name) : 0; if (di < 0) di = S.cur; if (rows() === 4 && di === 2 && $('mirror').checked) $('mirror').checked = false;
+      for (let c = 0; c < S.nch; c++) { const d = S.chars[c][di]; d.region = REGS[S.nch][c]; await setVideo(d, f.url, f.name); }
+      got.push(S.dirs[di].name); S.cur = di;
+    }
+    switchChar(S.ch); log('已载入：' + got.join('、') + (isGrp() ? '。上面点角色切换，每个角色各自选帧' : ''));
+  } catch (e) { log(e.message); }
+}
+function filesIn(fs) { const v = [...fs].filter(f => f.type.startsWith('video/') || /\.(mp4|webm|mov|m4v|ogv)$/i.test(f.name)); if (v.length) loadFiles(v.map(f => ({ name: f.name, url: URL.createObjectURL(f) }))); else log('没有可用的视频文件'); }
+$('drop').onclick = () => $('file').click();
+$('file').onchange = e => { filesIn(e.target.files); e.target.value = ''; };
+for (const ev of ['dragenter', 'dragover']) document.addEventListener(ev, e => { e.preventDefault(); $('drop').classList.add('over'); });
+for (const ev of ['dragleave', 'drop']) document.addEventListener(ev, e => { e.preventDefault(); $('drop').classList.remove('over'); });
+document.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files.length) filesIn(e.dataTransfer.files); });
+$('region').onchange = () => { const d = curDir(); d.region = $('region').value; d.cache.clear(); drawView(); refresh(); };
+function loadView() { const d = curDir(); $('region').value = d.region || 'full'; $('seek').max = Math.max(0, d.frames - 1); $('seek').value = d.v ? Math.max(0, Math.round(d.v.currentTime * fps() - 0.5)) : 0; $('cands').innerHTML = ''; drawView(); drawSlots(); }
+const vc = $('view').getContext('2d', { willReadFrequently: true });
+function msg(t) { vc.fillStyle = '#0b0f14'; vc.fillRect(0, 0, 960, 540); vc.fillStyle = '#8b9bab'; vc.font = '22px "Microsoft YaHei",sans-serif'; vc.textAlign = 'center'; vc.fillText(t, 480, 278); vc.textAlign = 'left'; $('fno').textContent = '-'; }
+async function drawView() {
+  const d = curDir();
+  if (rows() === 4 && S.cur === 2 && $('mirror').checked) return msg('右侧由左侧镜像生成，不需要视频');
+  if (!d.v) return msg('把视频拖进来，或点上面的虚线框选择文件');
+  const i = +$('seek').value; await seekTo(d.v, i); vc.fillStyle = '#000'; vc.fillRect(0, 0, 960, 540);
+  const [rx, ry, W, H] = srcRect(d.v, d.region), sc = Math.min(960 / W, 540 / H), w = W * sc, h = H * sc, x = (960 - w) / 2, y = (540 - h) / 2;
+  if ($('showKey').checked) { checker(vc, 960, 540); const k = keyFrame(d.v, 0.5, d.region); vc.drawImage(k.cv, x, y, w, h); } else vc.drawImage(d.v, rx, ry, W, H, x, y, w, h);
+  const pk = d.picks.indexOf(i); $('fno').textContent = `第 ${i} 帧 / 共 ${d.frames} 帧` + (pk >= 0 ? `　· 已用于第 ${pk + 1} 格` : '') + (d.A >= 0 ? `　· 起点 ${d.A}` : '') + (d.B >= 0 ? `　· 终点 ${d.B}` : '') + `　· ${d.file}`;
+}
+function checker(c, W, H) { for (let y = 0; y < H; y += 16) for (let x = 0; x < W; x += 16) { c.fillStyle = (x + y) / 16 % 2 ? '#262626' : '#333'; c.fillRect(x, y, 16, 16); } }
+$('seek').oninput = () => drawView();
+$('showKey').onchange = () => drawView();
+$('prev').onclick = () => { $('seek').value = Math.max(0, +$('seek').value - 1); drawView(); };
+$('next').onclick = () => { $('seek').value = Math.min(+$('seek').max, +$('seek').value + 1); drawView(); };
+document.addEventListener('keydown', e => { if ((e.target.tagName === 'INPUT' && e.target.type !== 'range') || e.target.tagName === 'SELECT') return; if (e.key === 'ArrowLeft') { $('prev').onclick(); e.preventDefault(); } if (e.key === 'ArrowRight') { $('next').onclick(); e.preventDefault(); } if (e.key === 'Enter') { $('pick').onclick(); e.preventDefault(); } });
+$('pick').onclick = () => { const d = curDir(); if (!d.v) return; d.picks[S.slot] = +$('seek').value; S.slot = (S.slot + 1) % d.picks.length; buildChars(); buildTabs(); refresh(); drawView(); };
+$('mkA').onclick = () => { curDir().A = +$('seek').value; drawView(); };
+$('mkB').onclick = () => { curDir().B = +$('seek').value; drawView(); };
+$('even').onclick = () => { const d = curDir(); if (d.A < 0 || d.B <= d.A) { log('先标好起点和终点（终点要在起点后面）'); return; } fillEven(d, d.A, d.B - d.A); };
+function fillEven(d, a, P) { const n = +$('n').value, o = $('idle').checked ? 1 : 0; for (let k = 0; k < n; k++) d.picks[o + k] = Math.round(a + k * P / n); if (o && d.picks[0] < 0) d.picks[0] = a; buildChars(); buildTabs(); refresh(); drawView(); log(`已在第 ${a}～${a + P} 帧之间均匀取 ${n} 帧` + (o ? '（待机格先用起点帧，可以另换）' : '')); }
+
+// ---------- 抠图 ----------
+const kc = document.createElement('canvas'), kx = kc.getContext('2d', { willReadFrequently: true });
+function keyFrame(src, scale, reg) {
+  const [rx, ry, rw, rh] = srcRect(src, reg), W = Math.round(rw * scale), H = Math.round(rh * scale); kc.width = W; kc.height = H; kx.drawImage(src, rx, ry, rw, rh, 0, 0, W, H);
+  const im = kx.getImageData(0, 0, W, H), p = im.data, T = +$('tol').value, black = $('mode').value === 'black';
+  for (let i = 0; i < p.length; i += 4) { const r = p[i], g = p[i + 1], b = p[i + 2];
+    if (black) { const L = Math.max(r, g, b), a = Math.max(0, Math.min(255, (L - T * 0.4) * 255 / (255 - T * 0.4))); p[i + 3] = a; if (L > 0) { p[i] = Math.min(255, r * 255 / L); p[i + 1] = Math.min(255, g * 255 / L); p[i + 2] = Math.min(255, b * 255 / L); } continue; }
+    if (g > r + T && g > b + T * 0.8) { p[i + 3] = 0; continue; }
+    const m = Math.max(r, b); if (g > r + T * 0.45 && g > b + T * 0.25) p[i + 3] = 140; if (g > m) p[i + 1] = m + (g - m) / 4; }
+  kx.putImageData(im, 0, 0); const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.getContext('2d').drawImage(kc, 0, 0); return { cv, im };
+}
+// 取一帧：抠图后裁出内容包围框（保留原视频坐标）
+async function grab(d, i) {
+  if (d.cache.has(i)) return d.cache.get(i);
+  await seekTo(d.pv, i); const { im } = keyFrame(d.pv, 1, d.region); const W = im.width, H = im.height, p = im.data, th = $('mode').value === 'black' ? 24 : 128;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (p[(y * W + x) * 4 + 3] >= th) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) { const e = { empty: true }; d.cache.set(i, e); return e; }
+  const w = x1 - x0 + 1, h = y1 - y0 + 1, data = new Uint8ClampedArray(w * h * 4); for (let y = 0; y < h; y++) data.set(p.subarray(((y0 + y) * W + x0) * 4, ((y0 + y) * W + x1 + 1) * 4), y * w * 4);
+  // 躯干中心：身体 40%～70% 高度那一段的不透明像素平均 x（发光特效用包围框中心）
+  let sx = 0, n = 0; if ($('mode').value !== 'black') for (let y = Math.floor(h * 0.4); y < Math.floor(h * 0.7); y++) for (let x = 0; x < w; x++) if (data[(y * w + x) * 4 + 3] >= th) { sx += x; n++; }
+  const e = { x0, y0, w, h, data, tx: x0 + (n ? sx / n : w / 2), foot: y1 + 1 }; d.cache.set(i, e); return e;
+}
+
+// ---------- 合成一个方向一个尺寸 ----------
+function boxDown(e, s, C, ox, oy) {   // 面积平均缩放（预乘 alpha），e 的视频坐标 → 格子坐标：X = (x - ox) * s
+  const out = new Float32Array(C * C * 4), inv = 1 / s;
+  for (let cy = 0; cy < C; cy++) for (let cx = 0; cx < C; cx++) {
+    const vx0 = ox + cx * inv - e.x0, vy0 = oy + cy * inv - e.y0, vx1 = vx0 + inv, vy1 = vy0 + inv;
+    if (vx1 <= 0 || vy1 <= 0 || vx0 >= e.w || vy0 >= e.h) continue;
+    let r = 0, g = 0, b = 0, a = 0; const xs = Math.max(0, Math.floor(vx0)), xe = Math.min(e.w, Math.ceil(vx1)), ys = Math.max(0, Math.floor(vy0)), ye = Math.min(e.h, Math.ceil(vy1));
+    for (let y = ys; y < ye; y++) { const wy = Math.min(y + 1, vy1) - Math.max(y, vy0); if (wy <= 0) continue; for (let x = xs; x < xe; x++) { const wx = Math.min(x + 1, vx1) - Math.max(x, vx0); if (wx <= 0) continue; const k = (y * e.w + x) * 4, al = e.data[k + 3] / 255 * wx * wy; r += e.data[k] * al; g += e.data[k + 1] * al; b += e.data[k + 2] * al; a += al; } }
+    const o = (cy * C + cx) * 4; if (a > 0) { out[o] = r / a; out[o + 1] = g / a; out[o + 2] = b / a; } out[o + 3] = a / (inv * inv) * 255;
+  }
+  return out;
+}
+function adjust(px) { const B = +$('bri').value * 1.28, Cn = 1 + +$('con').value / 100, Sa = 1 + +$('sat').value / 100; if (!B && Cn === 1 && Sa === 1) return;
+  for (let i = 0; i < px.length; i += 4) { if (!px[i + 3]) continue; let r = px[i], g = px[i + 1], b = px[i + 2]; const L = 0.3 * r + 0.59 * g + 0.11 * b; r = L + (r - L) * Sa; g = L + (g - L) * Sa; b = L + (b - L) * Sa; px[i] = (r - 128) * Cn + 128 + B; px[i + 1] = (g - 128) * Cn + 128 + B; px[i + 2] = (b - 128) * Cn + 128 + B; } }
+function refRowStats(row, R) { // 参考图这一行不透明像素的均值 / 标准差
+  if (!R) return null; const fh = R.height / (rows() === 4 ? 4 : 1), y0 = Math.round(row * fh), y1 = Math.round((row + 1) * fh), p = R.data.data, W = R.width; const sum = [0, 0, 0], sq = [0, 0, 0]; let n = 0;
+  for (let y = y0; y < y1; y++) for (let x = 0; x < W; x++) { const k = (y * W + x) * 4; if (p[k + 3] < 128) continue; for (let c = 0; c < 3; c++) { sum[c] += p[k + c]; sq[c] += p[k + c] * p[k + c]; } n++; }
+  if (!n) return null; return sum.map((s, c) => { const m = s / n; return [m, Math.sqrt(Math.max(1, sq[c] / n - m * m))]; });
+}
+function colorMatch(cells, st) { if (!st) return; const K = +$('matchK').value / 100; const all = [[], [], []];
+  for (const px of cells) for (let i = 0; i < px.length; i += 4) if (px[i + 3] >= 128) { if (px[i] + px[i + 1] + px[i + 2] < 60) continue; for (let c = 0; c < 3; c++) all[c].push(px[i + c]); }
+  if (!all[0].length) return; const ms = all.map(v => { const m = v.reduce((a, b) => a + b, 0) / v.length; return [m, Math.sqrt(Math.max(1, v.reduce((a, b) => a + (b - m) * (b - m), 0) / v.length))]; });
+  for (const px of cells) for (let i = 0; i < px.length; i += 4) { if (px[i + 3] < 128 || px[i] + px[i + 1] + px[i + 2] < 60) continue; for (let c = 0; c < 3; c++) { const v = (px[i + c] - ms[c][0]) / ms[c][1] * st[c][1] + st[c][0]; px[i + c] = px[i + c] * (1 - K) + v * K; } } }
+function medianCut(px, K) { // 简单中位切分调色板
+  let boxes = [px]; while (boxes.length < K) { let bi = -1, br = -1, bc = 0; boxes.forEach((b, i) => { if (b.length < 2) return; for (let c = 0; c < 3; c++) { let lo = 255, hi = 0; for (const p of b) { if (p[c] < lo) lo = p[c]; if (p[c] > hi) hi = p[c]; } if (hi - lo > br) { br = hi - lo; bi = i; bc = c; } } }); if (bi < 0 || br < 2) break; const b = boxes[bi].sort((p, q) => p[bc] - q[bc]), m = b.length >> 1; boxes.splice(bi, 1, b.slice(0, m), b.slice(m)); }
+  return boxes.map(b => [0, 1, 2].map(c => Math.round(b.reduce((s, p) => s + p[c], 0) / b.length)));
+}
+function hexRGB(h) { const m = /^#?([0-9a-f]{6})$/i.exec(h.trim()); const v = m ? parseInt(m[1], 16) : 0x221626; return [v >> 16 & 255, v >> 8 & 255, v & 255]; }
+async function buildDir(di, C, c = S.ch) {
+  const d = S.chars[c][di]; const picks = d.picks; const ents = []; for (const i of picks) ents.push(i >= 0 && d.pv ? await grab(d, i) : null);
+  const ok = ents.filter(e => e && !e.empty); if (!ok.length) return picks.map(() => null);
+  const ratio = S.cp[c].ratio / 100, footRow = Math.round(S.cp[c].foot * C / +$('cell').value), black = $('mode').value === 'black';
+  const Hmax = Math.max(...ok.map(e => e.h)), s = C * ratio / Hmax, footRef = Math.max(...ok.map(e => e.foot)), tm = ok.reduce((a, e) => a + e.tx, 0) / ok.length;
+  const cells = ents.map(e => { if (!e || e.empty) return null; const fRef = $('keepBob').checked ? footRef : e.foot; return boxDown(e, s, C, tm - C / 2 / s, fRef - (footRow + 1) / s); });
+  const px8 = cells.map(c => c ? Uint8ClampedArray.from(c) : null);
+  for (const p of px8) if (p) { adjust(p); if (!black) for (let i = 3; i < p.length; i += 4) p[i] = p[i] >= 110 ? 255 : 0; }
+  if ($('match').checked && S.refs[c]) colorMatch(px8.filter(Boolean), refRowStats(rows() === 4 ? di : 0, S.refs[c]));
+  const K = +$('colors').value; if (K > 0) { const all = []; for (const p of px8) if (p) for (let i = 0; i < p.length; i += 4) if (p[i + 3] > 0) all.push([p[i], p[i + 1], p[i + 2]]);
+    const step = Math.max(1, Math.floor(all.length / 20000)), pal = medianCut(all.filter((_, i) => i % step === 0), K);
+    for (const p of px8) if (p) for (let i = 0; i < p.length; i += 4) { if (!p[i + 3]) continue; let best = 0, bd = 1e9; for (let k = 0; k < pal.length; k++) { const q = pal[k], dd = (p[i] - q[0]) ** 2 + (p[i + 1] - q[1]) ** 2 + (p[i + 2] - q[2]) ** 2; if (dd < bd) { bd = dd; best = k; } } p[i] = pal[best][0]; p[i + 1] = pal[best][1]; p[i + 2] = pal[best][2]; } }
+  if ($('outline').checked && !black) { const oc = hexRGB($('olc').value); for (const p of px8) if (p) { const m = new Uint8Array(C * C); for (let i = 0; i < C * C; i++) m[i] = p[i * 4 + 3] ? 1 : 0;
+    for (let y = 0; y < C; y++) for (let x = 0; x < C; x++) { const i = y * C + x; if (m[i]) continue; if ((x > 0 && m[i - 1]) || (x < C - 1 && m[i + 1]) || (y > 0 && m[i - C]) || (y < C - 1 && m[i + C])) { p[i * 4] = oc[0]; p[i * 4 + 1] = oc[1]; p[i * 4 + 2] = oc[2]; p[i * 4 + 3] = 255; } } } }
+  return px8.map(p => { if (!p) return null; const cv = document.createElement('canvas'); cv.width = cv.height = C; cv.getContext('2d').putImageData(new ImageData(p, C, C), 0, 0); return cv; });
+}
+function mirrorCells(cells) { return cells.map(c => { if (!c) return null; const cv = document.createElement('canvas'); cv.width = c.width; cv.height = c.height; const x = cv.getContext('2d'); x.translate(c.width, 0); x.scale(-1, 1); x.drawImage(c, 0, 0); return cv; }); }
+async function buildAll(C) { const res = []; for (let di = 0; di < S.dirs.length; di++) { if (rows() === 4 && di === 2 && $('mirror').checked) { res.push(null); continue; } res.push(await buildDir(di, C)); } if (rows() === 4 && $('mirror').checked) res[2] = mirrorCells(res[1]); return res; }
+// 同屏对比：当前方向，每个角色按自己的参数合成（右侧镜像时用左侧翻转）
+async function buildCmp(C) {
+  if (!isGrp()) return null; const mir = rows() === 4 && S.cur === 2 && $('mirror').checked, di = mir ? 1 : S.cur, res = [];
+  for (let c = 0; c < S.nch; c++) { const cells = c === S.ch && S.out ? S.out[S.cur] : await buildDir(di, C, c); res.push(mir && c !== S.ch ? mirrorCells(cells) : cells); } return res;
+}
+
+// ---------- 刷新：格子缩略图 + 动画预览 ----------
+function refresh() { clearTimeout(S.timer); S.timer = setTimeout(async () => { if (S.busy) { refresh(); return; } S.busy = true; try { S.out = await buildAll(+$('cell').value); S.cmp = await buildCmp(+$('cell').value); drawSlots(); drawAnim(true); } catch (e) { log('出错：' + e.message); console.error(e); } S.busy = false; }, 250); }
+function drawSlots() {
+  const d = curDir(), box = $('slots'); box.innerHTML = ''; const o = $('idle').checked ? 1 : 0, cells = S.out && S.out[S.cur];
+  d.picks.forEach((f, k) => { const el = document.createElement('div'); el.className = 'slot' + (k === S.slot ? ' on' : '') + (o && k === 0 ? ' idle' : '');
+    const cv = document.createElement('canvas'); const C = +$('cell').value; cv.width = cv.height = C; const x = cv.getContext('2d'); x.fillStyle = '#3a5840'; x.fillRect(0, 0, C, C); if (cells && cells[k]) x.drawImage(cells[k], 0, 0);
+    x.fillStyle = 'rgba(255,255,255,.25)'; x.fillRect(0, Math.round(+$('foot').value) + 1, C, 1);
+    el.appendChild(cv); el.appendChild(document.createTextNode((o && k === 0 ? '待机 · ' : `第 ${k + 1 - o} 格 · `) + (f >= 0 ? '#' + f : '空')));
+    el.onclick = () => { S.slot = k; if (f >= 0 && d.v) { $('seek').value = f; drawView(); } drawSlots(); }; box.appendChild(el); });
+}
+const ac = $('anim'), ax = ac.getContext('2d');
+function drawAnim(resize) {
+  const C = +$('cell').value, Z = +$('zoom').value, R = rows(), showRef = $('showRef').checked && S.ref, gap = 10;
+  const colW = C * Z * (showRef ? 2 : 1) + gap, W = colW * (R === 4 ? 2 : 1), H = (C * Z + 22) * (R === 4 ? 2 : 1);
+  if (resize || ac.width !== W || ac.height !== H) { ac.width = W; ac.height = H; }
+}
+let tick = 0;
+function paint() {
+  drawAnim(false); const C = +$('cell').value, Z = +$('zoom').value, R = rows(), o = $('idle').checked ? 1 : 0, n = +$('n').value, showRef = $('showRef').checked && S.ref, gap = 10, colW = C * Z * (showRef ? 2 : 1) + gap;
+  ax.imageSmoothingEnabled = false; ax.fillStyle = '#161e27'; ax.fillRect(0, 0, ac.width, ac.height); const names = R === 4 ? DIR4 : DIR1; const k = tick % Math.max(1, n);
+  for (let r = 0; r < R; r++) { const x0 = (r % 2) * colW, y0 = Math.floor(r / 2) * (C * Z + 22); ax.fillStyle = '#e6edf3'; ax.font = '12px "Microsoft YaHei",sans-serif'; ax.fillText(names[r], x0 + 2, y0 + 14);
+    ax.fillStyle = '#3a5840'; ax.fillRect(x0, y0 + 20, C * Z, C * Z); const cells = S.out && S.out[r]; const c = cells && cells[o + k]; if (c) ax.drawImage(c, x0, y0 + 20, C * Z, C * Z);
+    ax.fillStyle = 'rgba(255,255,255,.3)'; ax.fillRect(x0, y0 + 20 + (+$('foot').value + 1) * Z, C * Z * (showRef ? 2 : 1), 1);
+    if (showRef) { const Rf = S.ref, fh = Rf.height / (R === 4 ? 4 : 1), cols = Math.max(1, Math.round(Rf.width / fh)); ax.fillStyle = '#334a3a'; ax.fillRect(x0 + C * Z, y0 + 20, C * Z, C * Z); ax.drawImage(Rf.img, (tick % cols) * fh, r * fh, fh, fh, x0 + C * Z, y0 + 20, C * Z, C * Z); } }
+  paintCmp(k); tick++;
+}
+function topRow(c) { const p = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) if (p[(y * c.width + x) * 4 + 3]) return y; return -1; }
+function paintCmp(k) {
+  if (!isGrp()) return;
+  const cc = $('cmp'), N = S.nch, C = +$('cell').value, Z = Math.max(2, +$('zoom').value), L = 34, W = L + N * C * Z + (N - 1) * 12, H = C * Z + 40; if (cc.width !== W || cc.height !== H) { cc.width = W; cc.height = H; }
+  const x = cc.getContext('2d'); x.imageSmoothingEnabled = false; x.fillStyle = '#161e27'; x.fillRect(0, 0, W, H); const top = 20, o = $('idle').checked ? 1 : 0;
+  const foot = Math.max(...S.cp.slice(0, N).map(p => p.foot)) + 1;   // 共用一条脚底线：标尺从这里往上数
+  for (let c = 0; c < N; c++) { const bx = L + c * (C * Z + 12); x.fillStyle = '#3a5840'; x.fillRect(bx, top, C * Z, C * Z);
+    const cell = S.cmp && S.cmp[c] && S.cmp[c][o + k % Math.max(1, +$('n').value)], dy = (foot - (S.cp[c].foot + 1)) * Z;   // 各人脚底对齐到共用线
+    if (cell) x.drawImage(cell, bx, top + dy, C * Z, C * Z);
+    let txt = S.names[c] + (c === S.ch ? ' ◀' : ''); if (cell) { const t = topRow(cell); if (t >= 0) { txt += `  身高 ${S.cp[c].foot + 1 - t}`; x.fillStyle = '#f5c542'; x.fillRect(bx, top + dy + t * Z, C * Z, 1); } }
+    x.fillStyle = '#e6edf3'; x.font = '12px "Microsoft YaHei",sans-serif'; x.fillText(txt, bx + 2, 14); }
+  for (let v = 0; v <= foot; v += 4) { const y = top + (foot - v) * Z, big = v % 8 === 0; x.fillStyle = big ? 'rgba(255,255,255,.28)' : 'rgba(255,255,255,.1)'; x.fillRect(L - (big ? 8 : 4), y, W - L + (big ? 8 : 4), 1);
+    if (big) { x.fillStyle = '#8b9bab'; x.font = '11px sans-serif'; x.fillText(String(v), 2, y + 4); } }
+  x.fillStyle = 'rgba(240,136,62,.85)'; x.fillRect(L - 8, top + foot * Z, W - L + 8, 1);
+}
+
+// ---------- 自动找循环 ----------
+$('auto').onclick = async () => {
+  const d = curDir(); if (!d.v) { log('先载入视频'); return; } const a0 = +$('seek').value, N = d.frames; if (N - a0 < 20) { log('当前帧后面剩的帧太少，先往前拖'); return; }
+  log('分析中…'); const sig = []; const sw = 96, sh = 54; const c = document.createElement('canvas'); c.width = sw; c.height = sh; const x = c.getContext('2d', { willReadFrequently: true });
+  const [rx, ry, rw, rh] = srcRect(d.pv, d.region), blk = $('mode').value === 'black';
+  for (let i = a0; i < N; i++) { await seekTo(d.pv, i); x.drawImage(d.pv, rx, ry, rw, rh, 0, 0, sw, sh); const p = x.getImageData(0, 0, sw, sh).data; const v = new Float32Array(sw * sh * 3); for (let k = 0; k < sw * sh; k++) { const r = p[k * 4], g = p[k * 4 + 1], b = p[k * 4 + 2], bg = !blk && g > r + 40 && g > b + 30; v[k * 3] = bg ? 0 : r; v[k * 3 + 1] = bg ? 0 : g; v[k * 3 + 2] = bg ? 0 : b; } sig.push(v); if ((i - a0) % 10 === 0) log(`分析中… ${i - a0}/${N - a0}`); }
+  const dif = (i, j) => { const A = sig[i], B = sig[j]; let s = 0; for (let k = 0; k < A.length; k++) s += Math.abs(A[k] - B[k]); return s / A.length; };
+  // 所有候选长度都用同一批起点帧比较（否则长循环能比的帧少、分数偏低，会被误选）
+  const Pmax = Math.min(60, sig.length - 20), I = sig.length - Pmax; if (Pmax < 8) { log('视频太短，无法自动分析，请手动标起点和终点'); return; }
+  const res = []; for (let P = 4; P <= Pmax; P++) { let s = 0; for (let i = 0; i < I; i++) s += dif(i, i + P); res.push([P, s / I]); }
+  const loc = res.filter((r, i) => i > 0 && i < res.length - 1 && r[1] <= res[i - 1][1] && r[1] <= res[i + 1][1]);
+  if (!loc.length) { log('没找到明显的循环，请手动标起点和终点'); return; }
+  // 基本循环 = 足够像的循环里最短的那个（足够像：离最好值的距离不超过「最好值到整条曲线中位数」的 25%）；跑步 / 走路的「左右脚各一步」通常是它的 2 倍
+  const bestV = Math.min(...loc.map(r => r[1])), med = res.map(r => r[1]).sort((a, b) => a - b)[res.length >> 1], lim = bestV + 0.25 * (med - bestV);
+  const P0 = Math.min(...loc.filter(r => r[1] <= lim).map(r => r[0]));
+  const opts = [[P0, '一步 / 一个循环']]; if (2 * P0 <= sig.length - 4) opts.push([2 * P0, '两步：左右脚各一步（跑步、走路选这个）']);
+  const box = $('cands'); box.innerHTML = '';
+  for (const [P, txt] of opts) { let best = 0, bv = 1e9; for (let i = 0; i + P < sig.length; i++) { const dd = dif(i, i + P); if (dd < bv) { bv = dd; best = i; } }
+    const b = document.createElement('button'); b.textContent = `${txt} · ${P} 帧（${(P / fps()).toFixed(2)} 秒）`; b.onclick = () => { d.A = a0 + best; d.B = a0 + best + P; fillEven(d, a0 + best, P); }; box.appendChild(b); }
+  log('分析完成：点上面一个按钮，在首尾最接得上的位置均匀取帧。取完可以逐格微调');
+};
+
+// ---------- 参考图 ----------
+$('refFile').onchange = e => { const f = e.target.files[0]; if (!f) return; loadRef(URL.createObjectURL(f)); e.target.value = ''; };
+function loadRef(url) { const ch = S.ch, img = new Image(); img.onload = () => { const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+  S.refs[ch] = { img: c, width: img.width, height: img.height, data: x.getImageData(0, 0, img.width, img.height) }; if (ch === S.ch) S.ref = S.refs[ch]; log(`参考图 ${img.width}×${img.height}（${S.names[ch]}）`); refresh(); drawAnim(true); }; img.src = url; }
+function measureRef(R) { const fh = R.height / (rows() === 4 ? 4 : 1), cols = Math.round(R.width / fh), p = R.data.data, hs = [], fs = [];
+  for (let r = 0; r < (rows() === 4 ? 4 : 1); r++) for (let c = 0; c < cols; c++) { let y0 = 1e9, y1 = -1; for (let y = 0; y < fh; y++) for (let x = 0; x < fh; x++) { const k = ((r * fh + y) * R.width + c * fh + x) * 4; if (p[k + 3] >= 128) { if (y < y0) y0 = y; if (y > y1) y1 = y; } } if (y1 >= 0) { hs.push(y1 - y0 + 1); fs.push(y1); } }
+  const med = a => a.sort((x, y) => x - y)[a.length >> 1], C = +$('cell').value, h = med(hs), f = med(fs); return { ratio: Math.round(h / fh * 100), foot: Math.round(f / fh * C), raw: [h, fh, f] }; }
+$('measure').onclick = () => { const R = S.ref; if (!R) { log('先载入参考图'); return; } const m = measureRef(R); $('ratio').value = m.ratio; $('foot').value = m.foot; S.cp[S.ch].ratio = m.ratio; S.cp[S.ch].foot = m.foot; log(`参考图：身高约 ${m.raw[0]} / ${m.raw[1]}，脚底第 ${m.raw[2]} 行`); refresh(); };
+
+// ---------- 导出 / 保存 ----------
+function sheetOf(res, C) { const R = rows(), n = slotsN(), cv = document.createElement('canvas'); cv.width = C * n; cv.height = C * R; const x = cv.getContext('2d'); for (let r = 0; r < R; r++) for (let k = 0; k < n; k++) { const c = res[r] && res[r][k]; if (c) x.drawImage(c, k * C, r * C); } return cv; }
+function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }
+function project() { return { tool: '视频抽帧工具 v1', preset: $('preset').value, n: +$('n').value, idle: $('idle').checked, cell: +$('cell').value, extra: $('extra').value, prefix: $('prefix').value, fps: fps(), mirror: $('mirror').checked,
+  params: Object.fromEntries(['mode', 'tol', 'colors', 'olc', 'bri', 'con', 'sat', 'matchK', 'ms'].map(k => [k, $(k).value]).concat(['keepBob', 'outline', 'match'].map(k => [k, $(k).checked]))),
+  name: S.names[S.ch], cp: S.cp[S.ch], dirs: S.dirs.map(d => ({ name: d.name, video: d.file, region: d.region, picks: d.picks, A: d.A, B: d.B })) }; }
+function missingDirs() { const m = []; S.dirs.forEach((d, i) => { if (rows() === 4 && i === 2 && $('mirror').checked) return; if (d.v && d.picks.some(f => f < 0)) m.push(d.name); }); return m; }
+async function exportCur() {
+  const base = +$('cell').value, sizes = [base, ...$('extra').value.split(/[,，\s]+/).map(Number).filter(v => v >= 8 && v !== base)], pre = safeName($('prefix').value);
+  for (const C of sizes) { log(`${pre}：生成 ${C}px…`); const cv = sheetOf(await buildAll(C), C); await new Promise(r => cv.toBlob(b => { download(C === base ? `${pre}.png` : `${pre}@${C}.png`, b); r(); }, 'image/png')); }
+  download(`${pre}_选帧记录.json`, new Blob([JSON.stringify(project(), null, 1)], { type: 'application/json' })); return sizes;
+}
+$('export').onclick = async () => {
+  const missing = missingDirs(); if (missing.length && !confirm('这些方向还有空格：' + missing.join('、') + '。仍然导出吗？')) return;
+  const sizes = await exportCur(); log('已导出 ' + $('prefix').value + '：' + sizes.map(c => c + 'px').join('、') + '（在浏览器的下载文件夹里）');
+};
+$('exportGrp').onclick = async () => {
+  const back = S.ch, warn = []; for (let c = 0; c < S.nch; c++) { switchChar(c); const m = missingDirs(); if (m.length) warn.push(S.names[c] + '：' + m.join('、')); }
+  if (warn.length && !confirm('还有空格——\n' + warn.join('\n') + '\n仍然导出吗？')) { switchChar(back); return; }
+  const done = []; for (let c = 0; c < S.nch; c++) { switchChar(c); await exportCur(); done.push($('prefix').value); } switchChar(back); log('已导出：' + done.join('、') + '（在浏览器的下载文件夹里）');
+};
+$('saveProj').onclick = () => download(safeName($('prefix').value) + '_选帧记录.json', new Blob([JSON.stringify(project(), null, 1)], { type: 'application/json' }));
+$('loadProj').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { const P = JSON.parse(await f.text()); $('preset').value = P.preset; applyPreset(); $('n').value = P.n; $('idle').checked = P.idle; $('cell').value = P.cell; $('extra').value = P.extra; $('fps').value = P.fps; $('mirror').checked = P.mirror;
+  for (const [k, v] of Object.entries(P.params || {})) { if (!$(k)) continue; if (typeof v === 'boolean') $(k).checked = v; else $(k).value = v; }
+  if (P.name) S.names[S.ch] = P.name; if (P.cp) S.cp[S.ch] = { ratio: P.cp.ratio, foot: P.cp.foot };
+  P.dirs.forEach((pd, i) => { const d = S.dirs[i]; if (!d) return; d.picks = pd.picks.slice(); d.A = pd.A; d.B = pd.B; d.region = pd.region || 'full'; fitPicks(d); });
+  switchChar(S.ch); log('已读取选帧记录。视频要重新载入同名文件：' + [...new Set(P.dirs.map(d => d.video).filter(Boolean))].join('、')); } catch (err) { log('读取失败：' + err.message); } e.target.value = ''; };
+
+applyPreset();
+(function loop() { setTimeout(loop, Math.max(20, +$('ms').value || 90)); paint(); })();
+// 测试用：?v=视频地址（可多个）&n=角色数
+(async () => { const q = new URLSearchParams(location.search); if (q.get('n')) $('kindSeg').children[+q.get('n') - 1].onclick(); const vs = q.getAll('v'); if (vs.length) await loadFiles(vs.map(u => ({ name: decodeURIComponent(u.split('/').pop()), url: u }))); })();
+</script>
+</body></html>
